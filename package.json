@@ -12,7 +12,7 @@
     "mocha": "^3.4.2",
     "requirejs": "^2.3.3"
   },
-  "main": "",
+  "main": "build/polymerase.js",
   "scripts": {
     "lint": "gulp lint",
     "build": "gulp build",
