@@ -1,6 +1,6 @@
 {
   "name": "polymerase",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A JavaScript utility that provides pure mixin functionality to allow for multiple class inheritance.",
   "dependencies": {},
   "devDependencies": {
