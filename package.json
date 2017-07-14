@@ -2,7 +2,9 @@
   "name": "polymerase",
   "version": "0.1.0",
   "description": "A JavaScript utility that provides pure mixin functionality to allow for multiple class inheritance.",
-  "dependencies": {},
+  "dependencies": {
+    "extend": "^3.0.1"
+  },
   "devDependencies": {
     "dev-tasks": "github:JoshuaCWebDeveloper/dev-tasks#2e4487b",
     "gulp": "^3.9.1",
