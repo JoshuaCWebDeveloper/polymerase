@@ -11,7 +11,7 @@ var assert = require('assert'),
     
 //begin mocha tests
 describe('polymerase', function () {
-    describe('Can be included', function () {
+    describe('Can be included via', function () {
         var testScriptTag = function (filename, done) {
             //include the file via a script tag
             var dom = new JSDOM(
@@ -38,22 +38,22 @@ describe('polymerase', function () {
 
         };
 
-        it ("Via a script tag", function (done) {
+        it ("A script tag", function (done) {
             testScriptTag("../dist/polymerase.js", done);
         });
 
-        it ("Via a script tag using minified script", function (done) {
+        it ("A script tag using minified script", function (done) {
             testScriptTag("../dist/polymerase.min.js", done);
         });
 
-        it ("Via CommonJS", function () {
+        it ("CommonJS", function () {
             //include using CommonJS
             var polyInc = require('../../build/polymerase.js');
             //should have been imported
             assert.equal(typeof polyInc, "function");
         });
         
-        it ("Via RequireJS", function (done) {
+        it ("RequireJS", function (done) {
             //include the file via a script tag
             var dom = new JSDOM(
                 `
