@@ -20,6 +20,7 @@
     "build": "gulp build",
     "bundle": "gulp bundle",
     "minify": "gulp minify",
+    "release": "gulp release",
     "test": "mocha test/suites/*.test.js",
     "test-inspect": "mocha --inspect --debug-brk test/suites/*.test.js"
   },
