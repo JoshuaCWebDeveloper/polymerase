@@ -13,6 +13,7 @@ var DevOps = require('dev-tasks'),
 
 //configure dev-tasks
 DevOps.init({
+    appName: "polymerase",
     bundleDir: "dist",
     bundleName: "polymerase",
     wpSingleEntryPoint: "./src/polymerase.js",
@@ -21,7 +22,8 @@ DevOps.init({
             library: "polymerase",
             libraryTarget: "umd"
         }
-    }
+    },
+    gitCommitterName: "PolymeraseDevTasks"
 });
 
 
@@ -35,6 +37,7 @@ Available Gulp Commands:
  - build
  - bundle
  - minify
+ - release major|minor|patch
 `
     );
 });
@@ -62,3 +65,17 @@ gulp.task('minify', function () {
         return DevOps.bundle("production", true);
     }).done();
 });
+
+//create a new release and push it to master
+gulp.task('release', function () {
+    return DevOps.release().done();
+});
+
+//create dummy tasks so that we can use non-hyphentated arguments
+var dummy = function () {
+        return;
+    },
+    dummies = ['patch', 'minor', 'major'];
+for (let i=0; i<dummies.length; i++) {
+    gulp.task(dummies[i], dummy);
+}
