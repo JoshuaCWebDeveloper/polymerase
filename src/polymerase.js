@@ -1,12 +1,61 @@
 /* polymerase.js
  * Main project file, defines and exports main function
- * Dependencies: extend module
+ * Dependencies: extend, jcscript, validate.js modules
  * Author: Joshua Carter
  * Created: July 08, 2017
  */
 "use strict";
 //include dependencies
 import extend from 'extend';
+import { JCObject } from 'jcscript';
+import validate from 'validate.js';
+var constraints;
+//create custom validators
+extend(validate.validators, {
+    //notEmpty works on optional attributes, 
+    //but ensures that when passed, they are not a falsey value
+    notEmpty: function (value, opts, key, attributes) {
+        //normalize opts
+        var options = typeof opts == "object" ? opts : {};
+        //if this prop was passed
+        if (key in attributes) {
+            //then it should be truthy, if it isn't
+            if (!value) {
+                return options.message || "should not be empty";
+            }
+        }   //else, it either wasn't passed, or it isn't empty
+    },
+    typeOf: function (value, opts) {
+        //normalize opts
+        var options = typeof opts == "object" ? opts : {type: opts};
+        //default empty logic
+        //if value is NOT of the correct type
+        if (!validate.isEmpty(value) && typeof value != options.type) {
+            //fail
+            return options.message || `should by of type: ${options.type}`;
+        }   //else, it is of the correct type
+    }
+});
+//define validation constraints
+constraints = {
+    duplicates: function (value) {
+        //init validators
+        var validators = {
+            notEmpty: true
+        };
+        //if value is NOT a function
+        if (typeof value != "function") {
+            //then apply an inclusion validation
+            validators.inclusion = ["first", "last", "merge"];
+        }
+        //return validators
+        return validators;
+    },
+    duplicateNotify: {
+        notEmpty: true,
+        typeOf: "string"
+    }
+};
 //define new mixin class
 class Mixin {
     constructor () {

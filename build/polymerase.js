@@ -1,6 +1,6 @@
 /* polymerase.js
  * Main project file, defines and exports main function
- * Dependencies: extend module
+ * Dependencies: extend, jcscript, validate.js modules
  * Author: Joshua Carter
  * Created: July 08, 2017
  */
@@ -9,9 +9,17 @@
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _extend = require("extend");
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _extend = require('extend');
 
 var _extend2 = _interopRequireDefault(_extend);
+
+var _jcscript = require('jcscript');
+
+var _validate = require('validate.js');
+
+var _validate2 = _interopRequireDefault(_validate);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -19,7 +27,55 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var constraints;
+//create custom validators
+(0, _extend2.default)(_validate2.default.validators, {
+    //notEmpty works on optional attributes, 
+    //but ensures that when passed, they are not a falsey value
+    notEmpty: function notEmpty(value, opts, key, attributes) {
+        //normalize opts
+        var options = (typeof opts === 'undefined' ? 'undefined' : _typeof(opts)) == "object" ? opts : {};
+        //if this prop was passed
+        if (key in attributes) {
+            //then it should be truthy, if it isn't
+            if (!value) {
+                return options.message || "should not be empty";
+            }
+        } //else, it either wasn't passed, or it isn't empty
+    },
+    typeOf: function typeOf(value, opts) {
+        //normalize opts
+        var options = (typeof opts === 'undefined' ? 'undefined' : _typeof(opts)) == "object" ? opts : { type: opts };
+        //default empty logic
+        //if value is NOT of the correct type
+        if (!_validate2.default.isEmpty(value) && (typeof value === 'undefined' ? 'undefined' : _typeof(value)) != options.type) {
+            //fail
+            return options.message || 'should by of type: ' + options.type;
+        } //else, it is of the correct type
+    }
+});
+//define validation constraints
+constraints = {
+    duplicates: function duplicates(value) {
+        //init validators
+        var validators = {
+            notEmpty: true
+        };
+        //if value is NOT a function
+        if (typeof value != "function") {
+            //then apply an inclusion validation
+            validators.inclusion = ["first", "last", "merge"];
+        }
+        //return validators
+        return validators;
+    },
+    duplicateNotify: {
+        notEmpty: true,
+        typeOf: "string"
+    }
+};
 //define new mixin class
+
 var Mixin = function () {
     function Mixin() {
         _classCallCheck(this, Mixin);
