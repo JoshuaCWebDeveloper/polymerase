@@ -393,10 +393,29 @@ var Mixin = function () {
 
 
 function main() {
-    //create new mixin
-    var mixin = new (Function.prototype.bind.apply(Mixin, [null].concat(Array.prototype.slice.call(arguments))))();
-    //return new parent class
-    return mixin.newClass();
+    //if our main function is being executed,
+    //then call init to construct new mixin function
+    //(use default config)
+    var executeMixin = main.init();
+    //pass given args to mixin function, return result
+    return executeMixin.apply(undefined, arguments);
 }
+//define static methods
+main.init = function (props) {
+    //create new mixin
+    var mixin = new Mixin();
+    //if we received props
+    if ((typeof props === 'undefined' ? 'undefined' : _typeof(props)) == "object") {
+        //then we need to process our configuration
+        mixin.setConfig(props);
+    }
+    //create and return new mixin function
+    return function () {
+        //execute mixin
+        mixin.mix.apply(mixin, arguments);
+        //return new parent class
+        return mixin.newClass();
+    };
+};
 //export main function
 module.exports = main;
