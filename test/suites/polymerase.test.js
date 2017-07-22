@@ -9,7 +9,7 @@
 var assert = require('assert'),
     extend = require('extend'),
     JSDOM = require('jsdom').JSDOM,
-    polymerase = require('../../build/polymerase.js');
+    polymeraseMain = require('../../build/polymerase.js');
     
 //begin mocha tests
 describe('polymerase', function () {
@@ -158,7 +158,8 @@ describe('polymerase', function () {
                     }
                 });
                 return newTest;
-            };
+            },
+            polymerase = polymeraseMain;
         //run init test for each test
         beforeEach(function () {
             test = initTest();
@@ -360,10 +361,15 @@ describe('polymerase', function () {
              newTest.class2.prototype.sqrId = testStrings.sqrId2;
              newTest.class3.prototype.square = testStrings.square3;
              return newTest;
-            };
+            },
+            polymerase;
         //run init test for each test
         beforeEach(function () {
             test = initTest();
+            //logging off
+            polymerase = polymeraseMain.init({
+                duplicateNotify: 'off'
+            });
         });
         
         it ("Two functions", function () {
