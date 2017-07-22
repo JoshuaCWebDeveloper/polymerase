@@ -3,7 +3,9 @@
   "version": "0.2.0",
   "description": "A JavaScript utility that provides pure mixin functionality to allow for multiple class inheritance.",
   "dependencies": {
-    "extend": "^3.0.1"
+    "extend": "^3.0.1",
+    "jcscript": "^1.4.0",
+    "validate.js": "^0.11.1"
   },
   "devDependencies": {
     "dev-tasks": "github:JoshuaCWebDeveloper/dev-tasks#2661e31",
@@ -12,7 +14,8 @@
     "gulp-util": "^3.0.8",
     "jsdom": "^11.1.0",
     "mocha": "^3.4.2",
-    "requirejs": "^2.3.3"
+    "requirejs": "^2.3.3",
+    "sinon": "^2.3.8"
   },
   "main": "build/polymerase.js",
   "scripts": {
