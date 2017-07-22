@@ -26,26 +26,28 @@ var Mixin = function () {
 
         //store constructor props
         this._constructorMethods = [];
+        //store original mixins as given
+        this._originalArgs = [];
+        //store processed mixins
+        this._processedArgs = [];
         //store duplicate props (name: props)
         this._duplicateNames = {};
         //store new prototype
         this._newPrototype = {};
         //store new class
         this._newClass = null;
-
-        //process arguments
-        this._processArgs(arguments);
-        //resolve duplicates
-        this._resolveDuplicates();
-        //create a new class
-        this._createNewClass();
+        //create new configurations object
+        this._Config = new _jcscript.JCObject({
+            duplicates: 'merge',
+            duplicateNotify: 'warn'
+        });
     }
 
     //GETTERS
 
 
     _createClass(Mixin, [{
-        key: "newClass",
+        key: 'newClass',
         value: function newClass() {
             return this._newClass;
         }
@@ -53,7 +55,77 @@ var Mixin = function () {
         //SETTERS
 
     }, {
-        key: "_processArgs",
+        key: 'setConfig',
+        value: function setConfig(props) {
+            //first validate props
+            var validation = (0, _validate2.default)(props, constraints);
+            //if there were errors
+            if (validation) {
+                //then throw the entire validation object joined into a string
+                throw new Error(Object.keys(validation).map(function (k) {
+                    return validation[k].join("\n");
+                }).join("\n"));
+            } //else there were no errors
+            //we want to extend object values instead of overriding them
+            for (var k in props) {
+                if (_typeof(props[k]) == "object") {
+                    (0, _extend2.default)(true, props[k], this._Config.get(k), props[k]);
+                }
+            }
+            //update our config
+            this._Config.update(props);
+        }
+    }, {
+        key: '_createNewDuplicate',
+        value: function _createNewDuplicate(name, value, i) {
+            var firstIndex = -1;
+            //create a new duplicate entry
+            this._duplicateNames[name] = {};
+            //if this name was already added
+            if (name in this._newPrototype) {
+                //get the index of the mixin the existing name came from
+                for (var j = 0; j < this._processedArgs.length; j++) {
+                    if (name in this._processedArgs[j]) {
+                        firstIndex = j;
+                        break;
+                    }
+                }
+                //if we couldn't find this name in any of the processed args
+                if (firstIndex < 0) {
+                    //then we can't proceed
+                    throw new Error('Unable to find duplicate \'' + name + '\' in processed args');
+                } //by now, we have the index of the mixin this came from
+                //add existing name value to duplicates
+                this._duplicateNames[name][firstIndex] = this._newPrototype[name];
+                //remove existing name from prototype
+                delete this._newPrototype[name];
+            }
+            //add new name value
+            this._addDuplicate(name, value, i);
+        }
+    }, {
+        key: '_addDuplicate',
+        value: function _addDuplicate(name, value, i) {
+            this._duplicateNames[name][i] = value;
+        }
+    }, {
+        key: 'mix',
+        value: function mix() {
+            for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+                args[_key] = arguments[_key];
+            }
+
+            //store original mixins as given
+            this._originalArgs = args;
+            //process arguments
+            this._processArgs(args);
+            //resolve duplicates
+            this._resolveDuplicates();
+            //create a new class
+            this._createNewClass();
+        }
+    }, {
+        key: '_processArgs',
         value: function _processArgs(args) {
             //loop arguments
             for (var arg = 0; arg < args.length; arg++) {
@@ -80,63 +152,83 @@ var Mixin = function () {
                     //if a prop with this name was already added
                     if (name in this._newPrototype) {
                         //create a new duplicate entry for this prop name
-                        this._createNewDuplicate(name, props[name]);
+                        this._createNewDuplicate(name, props[name], arg);
                         //nothing more to do
                         continue;
                     }
                     //if a prop with this name is in duplicates
                     if (name in this._duplicateNames) {
                         //add it
-                        this._addDuplicate(name, props[name]);
+                        this._addDuplicate(name, props[name], arg);
                         //nothing more to do
                         continue;
                     }
                     //else, this method is ready to be added to our new prototype
                     this._newPrototype[name] = props[name];
                 }
+                //this arg has been processed
+                this._processedArgs.push(props);
             }
         }
     }, {
-        key: "_createNewDuplicate",
-        value: function _createNewDuplicate(name, value) {
-            //create a new duplicate entry
-            this._duplicateNames[name] = [];
-            //if this name was already added
-            if (name in this._newPrototype) {
-                //add existing name value to duplicates
-                this._duplicateNames[name].push(this._newPrototype[name]);
-                //remove existing name from prototype
-                delete this._newPrototype[name];
-            }
-            //add new name value
-            this._addDuplicate(name, value);
-        }
-    }, {
-        key: "_addDuplicate",
-        value: function _addDuplicate(name, value) {
-            this._duplicateNames[name].push(value);
-        }
-    }, {
-        key: "_resolveDuplicates",
+        key: '_resolveDuplicates',
         value: function _resolveDuplicates() {
             var _this = this;
 
+            //get duplicates strategy
+            var strategy = this._Config.get("duplicates");
+            //loop duplicates
+
             var _loop = function _loop(name) {
-                //TODO: Handle additional handleDuplicates options
-                //MERGE:
-                //determine if any of our duplicates our functions
-                var haveFunction = false;
-                for (var d = 0; d < _this._duplicateNames[name].length; d++) {
-                    if (typeof _this._duplicateNames[name][d] == "function") {
+                //get keys of duplicate values
+                var mixinKeys = Object.keys(_this._duplicateNames[name]).sort(),
+
+                //determine if any of our duplicates are functions
+                haveFunction = false,
+
+                //get ordered array of values for this name
+                duplicateValues = mixinKeys.map(function (i) {
+                    //while we're mapping, also look for a function value
+                    if (typeof _this._duplicateNames[name][i] == "function") {
                         haveFunction = true;
                     }
+                    //now, map to the value
+                    return _this._duplicateNames[name][i];
+                });
+                //send notification about this duplicate
+                _this._notifyDuplicate(name);
+                //if we are to use the first duplicate
+                if (strategy == "first") {
+                    //then do so
+                    _this._newPrototype[name] = duplicateValues[0];
+                    //resolved
+                    return 'continue';
                 }
+                //if we are to use the last duplicate
+                if (strategy == "last") {
+                    //the do so
+                    _this._newPrototype[name] = duplicateValues.slice(-1)[0];
+                    //resolved
+                    return 'continue';
+                }
+                //if we are to use the result from a handler
+                if (typeof strategy == "function") {
+                    //then do so
+                    _this._newPrototype[name] = strategy(name, mixinKeys.map(function (i) {
+                        //map to mixin from original arguments
+                        return _this._originalArgs[i];
+                    }));
+                    //resolved
+                    return 'continue';
+                }
+                //else, we will merge the duplicates together
+                //MERGE:
                 //if there were no functions
                 if (!haveFunction) {
                     //then just add array of values
-                    _this._newPrototype[name] = _this._duplicateNames[name];
+                    _this._newPrototype[name] = duplicateValues;
                     //this duplicate is now resolved
-                    return "continue";
+                    return 'continue';
                 } //else, at least one of our duplicates was a function
                 //add a new function that resolves our duplicate
                 //function takes an array of arguments to pass to each duplicate function
@@ -144,9 +236,9 @@ var Mixin = function () {
                     //store array of results
                     var results = [];
                     //loop our duplicates
-                    for (var _d = 0, argI = 0; _d < _this._duplicateNames[name].length; _d++) {
-                        var prop = _this._duplicateNames[name][_d],
-                            args = void 0;
+                    for (var d = 0, argI = 0; d < duplicateValues.length; d++) {
+                        var prop = duplicateValues[d],
+                            _args = void 0;
                         //if this is NOT a function
                         if (typeof prop != "function") {
                             //then just add value to results
@@ -155,9 +247,9 @@ var Mixin = function () {
                             continue;
                         } //else, this is a function
                         //get arguments for this function
-                        args = (arguments.length <= argI ? undefined : arguments[argI]) || [];
+                        _args = (arguments.length <= argI ? undefined : arguments[argI]) || [];
                         //call this function, pass args, store result
-                        results.push(prop.apply(undefined, _toConsumableArray(args)));
+                        results.push(prop.apply(undefined, _toConsumableArray(_args)));
                         //increment arguments index
                         argI++;
                     }
@@ -166,15 +258,37 @@ var Mixin = function () {
                 };
             };
 
-            //loop duplicates
             for (var name in this._duplicateNames) {
                 var _ret = _loop(name);
 
-                if (_ret === "continue") continue;
+                if (_ret === 'continue') continue;
             }
         }
     }, {
-        key: "_createNewClass",
+        key: '_notifyDuplicate',
+        value: function _notifyDuplicate(name) {
+            //get our strategy and notify setting
+            var strategy = this._Config.get("duplicates"),
+                notify = this._Config.get("duplicateNotify");
+            //if our notify setting is off
+            if (notify == "off") {
+                //then do nothing
+                return;
+            }
+            //if our notify setting is invalid
+            if (typeof console[notify] != "function") {
+                //then just use the log channel
+                notify = "log";
+            }
+            //convert strategy to name if function
+            if (typeof strategy == "function") {
+                strategy = "handler";
+            }
+            //send notification
+            console[notify]('Found duplicate property "' + name + '" and will resolve using ' + strategy + ' strategy.');
+        }
+    }, {
+        key: '_createNewClass',
         value: function _createNewClass() {
             //store this
             var that = this;
@@ -188,10 +302,10 @@ var Mixin = function () {
                     //loop constructors
                     for (var c = 0; c < that._constructorMethods.length; c++) {
                         //get arguments for this constructor
-                        var args = arguments[c] || [],
+                        var _args2 = arguments[c] || [],
 
                         //call constructor, pass args, store result
-                        instance = new (Function.prototype.bind.apply(that._constructorMethods[c], [null].concat(_toConsumableArray(args))))(),
+                        instance = new (Function.prototype.bind.apply(that._constructorMethods[c], [null].concat(_toConsumableArray(_args2))))(),
 
                         //get own enumerable properties
                         props = Object.keys(instance);
