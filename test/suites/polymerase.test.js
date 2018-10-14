@@ -97,7 +97,8 @@ describe('polymerase', function () {
                 multiply: "func1.multiply()",
                 divide: "func2.divide()",
                 factor: "func3.factor()",
-                square: "class1.square()"
+                square: "class1.square()",
+                sqrt: "class2.sqrt"
             },
             //use value of 2
             testInitValue = 2,
@@ -157,6 +158,18 @@ describe('polymerase', function () {
                         return testStrings.factor;
                     }
                 });
+                //add child classes
+                newTest.class2 = class extends newTest.class1 {
+                    constructor (val) {
+                        super(val);
+                        this.sqrted = val || testInitValue;
+                    }
+
+                    sqrt () {
+                        this.sqrted++;
+                        return testStrings.sqrt;
+                    }
+                };
                 return newTest;
             },
             polymerase = polymeraseMain;
@@ -230,6 +243,16 @@ describe('polymerase', function () {
                 assert.equal(instance.add(), testStrings.add);
                 assert.equal(instance.multiply(), testStrings.multiply);
                 assert.equal(instance.divide(), testStrings.divide);
+            });
+            
+            it ("Class and its parent prototype", function () {
+                //create mixin
+                var parent = polymerase(test.func1, test.class2),
+                    //create instance
+                    instance = new parent();
+                //should have prototype of parent
+                assert.equal(typeof instance.square, "function");
+                assert.equal(instance.square(), testStrings.square);
             });
         });
         

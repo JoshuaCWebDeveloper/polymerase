@@ -27,6 +27,9 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+//define base prototype to use in logic
+var BASE_PROTO = Object.getPrototypeOf(function () {});
+
 var constraints;
 //create custom validators
 (0, _extend2.default)(_validate2.default.validators, {
@@ -84,6 +87,8 @@ var Mixin = function () {
         this._constructorMethods = [];
         //store original mixins as given
         this._originalArgs = [];
+        //store identified custom prototypes
+        this._customPrototypes = [];
         //store processed mixins
         this._processedArgs = [];
         //store duplicate props (name: props)
@@ -95,7 +100,8 @@ var Mixin = function () {
         //create new configurations object
         this._Config = new _jcscript.JCObject({
             duplicates: 'merge',
-            duplicateNotify: 'warn'
+            duplicateNotify: 'warn',
+            recursionLeft: 500
         });
     }
 
@@ -187,9 +193,17 @@ var Mixin = function () {
             for (var arg = 0; arg < args.length; arg++) {
                 //store current collection of props
                 var props = args[arg],
+                    proto = void 0,
                     names = void 0;
                 //if our current collection was actually a function
                 if (typeof props == "function") {
+                    //first, get the prototype of our function
+                    proto = Object.getPrototypeOf(props);
+                    //if the prototype of our function is not the base prototype
+                    if (proto != BASE_PROTO) {
+                        //then it is a custom prototype, save it
+                        this._customPrototypes.push(proto);
+                    }
                     //use the prototype of this function for our props
                     props = props.prototype;
                 }
@@ -347,7 +361,27 @@ var Mixin = function () {
         key: '_createNewClass',
         value: function _createNewClass() {
             //store this
-            var that = this;
+            var that = this,
+                parent = null,
+                newMixin;
+            //if we have two or more custom prototypes
+            if (this._customPrototypes.length >= 2) {
+                //if we have no recursion left
+                if (!this._Config.get('recursionLeft')) {
+                    //then there is something wrong
+                    throw new Error("Infinite loop, iterated 500 times while merging custom prototypes");
+                }
+                //then mix them together to create our parent
+                newMixin = main.init((0, _extend2.default)({}, this._Config.get(), {
+                    recursionLeft: this._Config.get('recursionLeft') - 1
+                }));
+                parent = newMixin.apply(undefined, _toConsumableArray(this._customPrototypes));
+            }
+            //else, if we have just one custom prototype
+            else if (this._customPrototypes.length == 1) {
+                    //then use our only custom prototype as our parent
+                    parent = this._customPrototypes[0];
+                } //else, we will just extend Object
             //create a new class that will be the parent that we return
             this._newClass = function () {
                 //the constructor function accepts an array of arguments
@@ -375,6 +409,32 @@ var Mixin = function () {
 
                 return _class;
             }();
+            //if we have a parent for our new class
+            if (parent) {
+                //then set our prototype to that of the parent
+
+                /*
+                 * Use Object.setPrototypeOf() to accomplish this.
+                 * 
+                 * According to the docs, this method can have severe performance implications:
+                 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
+                 * 
+                 * However, recent testing I did, indicated that when using it to set a
+                 * constructor's prototype, the performance impact was negligible:
+                 * https://jsperf.com/object-create-vs-object-setprototypeof/8
+                 *
+                 * If it is later determined that this method does in fact impose negative
+                 * side effects, the alternative is to use an ES5-style constructor instead of
+                 * and ES6-style class to create this._newClass. Then Object.create() can be
+                 * used to directly reassign the prototype of the ES5-style constructor like so:
+                 * ```
+                 * this._newClass.prototype = Object.create(parent.prototype);
+                 * this._newClass.prototype.constructor = this._newClass;
+                 * ```
+                 * 
+                 */
+                Object.setPrototypeOf(this._newClass.prototype, parent.prototype);
+            }
             //now extend the prototype of our new class with our new prototype
             for (var name in this._newPrototype) {
                 //use defineProperty to set properties as non-enumerable
