@@ -382,58 +382,48 @@ var Mixin = function () {
                     //then use our only custom prototype as our parent
                     parent = this._customPrototypes[0];
                 } //else, we will just extend Object
+
             //create a new class that will be the parent that we return
+
+            /*
+             * Use an ES5-style constructor function
+             * We do this instead of using an ES6-style class because:
+             *  - We just want the prototype of our new parent,
+             *    we don't want to have to call it's super method.
+             *  - The prototype of a class can't be reassigned,
+             *    so we would have to use Object.setPrototypeOf().
+             *    This method has performance implications as stated here:
+             *    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
+             * 
+             */
             this._newClass = function () {
                 //the constructor function accepts an array of arguments
                 //for each constructor function that was given to us
-                function _class() {
-                    _classCallCheck(this, _class);
 
-                    //loop constructors
-                    for (var c = 0; c < that._constructorMethods.length; c++) {
-                        //get arguments for this constructor
-                        var _args2 = arguments[c] || [],
+                //loop constructors
+                for (var c = 0; c < that._constructorMethods.length; c++) {
+                    //get arguments for this constructor
+                    var _args2 = arguments[c] || [],
 
-                        //call constructor, pass args, store result
-                        instance = new (Function.prototype.bind.apply(that._constructorMethods[c], [null].concat(_toConsumableArray(_args2))))(),
+                    //call constructor, pass args, store result
+                    instance = new (Function.prototype.bind.apply(that._constructorMethods[c], [null].concat(_toConsumableArray(_args2))))(),
 
-                        //get own enumerable properties
-                        props = Object.keys(instance);
-                        //extend this with result 
-                        for (var k = 0; k < props.length; k++) {
-                            var prop = props[k];
-                            this[prop] = instance[prop];
-                        }
+                    //get own enumerable properties
+                    props = Object.keys(instance);
+                    //extend this with result 
+                    for (var k = 0; k < props.length; k++) {
+                        var prop = props[k];
+                        this[prop] = instance[prop];
                     }
                 }
 
-                return _class;
-            }();
-            //if we have a parent for our new class
+                return this;
+            };
+            //if we actually have a parent to extend
             if (parent) {
-                //then set our prototype to that of the parent
-
-                /*
-                 * Use Object.setPrototypeOf() to accomplish this.
-                 * 
-                 * According to the docs, this method can have severe performance implications:
-                 * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/setPrototypeOf
-                 * 
-                 * However, recent testing I did, indicated that when using it to set a
-                 * constructor's prototype, the performance impact was negligible:
-                 * https://jsperf.com/object-create-vs-object-setprototypeof/8
-                 *
-                 * If it is later determined that this method does in fact impose negative
-                 * side effects, the alternative is to use an ES5-style constructor instead of
-                 * and ES6-style class to create this._newClass. Then Object.create() can be
-                 * used to directly reassign the prototype of the ES5-style constructor like so:
-                 * ```
-                 * this._newClass.prototype = Object.create(parent.prototype);
-                 * this._newClass.prototype.constructor = this._newClass;
-                 * ```
-                 * 
-                 */
-                Object.setPrototypeOf(this._newClass.prototype, parent.prototype);
+                //then do so
+                this._newClass.prototype = Object.create(parent.prototype);
+                this._newClass.prototype.constructor = this._newClass;
             }
             //now extend the prototype of our new class with our new prototype
             for (var name in this._newPrototype) {
